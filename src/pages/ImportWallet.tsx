@@ -1,6 +1,7 @@
 import React, { useState } from "react"
 import { Button } from "../components/Button"
 import { Input } from "../components/Input"
+import { validateMnemonic } from "bip39"
 
 interface ImportWalletProps {
   onImport: (password: string, mnemonic: string) => void
@@ -9,20 +10,40 @@ interface ImportWalletProps {
 
 export const ImportWallet: React.FC<ImportWalletProps> = ({ onImport, onBack }) => {
   const [password, setPassword] = useState("")
-  const [mnemonic, setMnemonic] = useState("")
+  const [words, setWords] = useState<string[]>(Array(12).fill(""))
   const [error, setError] = useState("")
+
+  const handleWordChange = (index: number, value: string) => {
+    const next = [...words]
+    next[index] = value.trim().toLowerCase()
+    setWords(next)
+  }
+
+  const focusNext = (index: number) => {
+    const next = document.getElementById(`mnemonic-${index + 1}`) as HTMLInputElement | null
+    next?.focus()
+  }
 
   const handleImport = async () => {
     if (!password) {
       setError("请输入密码")
       return
     }
-    if (!mnemonic) {
-      setError("请输入助记词")
+    if (password.length < 8) {
+      setError("密码至少需要8位")
+      return
+    }
+    const mnemonic = words.join(" ").trim()
+    if (!mnemonic || words.some(w => !w)) {
+      setError("请完整填写12个助记词")
       return
     }
     if (mnemonic.split(" ").length !== 12) {
       setError("助记词应该是12个单词")
+      return
+    }
+    if (!validateMnemonic(mnemonic)) {
+      setError("助记词不合法，请检查拼写与顺序")
       return
     }
 
@@ -58,12 +79,27 @@ export const ImportWallet: React.FC<ImportWalletProps> = ({ onImport, onBack }) 
           placeholder="用于加密钱包"
         />
 
-        <Input
-          label="助记词"
-          value={mnemonic}
-          onChange={setMnemonic}
-          placeholder="输入12个助记词，用空格分隔"
-        />
+        <div>
+          <label className="block text-sm font-medium text-gray-300 mb-2">助记词</label>
+          <div className="grid grid-cols-3 gap-2">
+            {words.map((w, i) => (
+              <input
+                key={i}
+                id={`mnemonic-${i}`}
+                value={w}
+                onChange={(e) => handleWordChange(i, e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === " " || e.key === "Enter") {
+                    e.preventDefault()
+                    focusNext(i)
+                  }
+                }}
+                className="w-full p-2 rounded-lg bg-gray-700 border border-gray-600 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder={`${i + 1}`}
+              />
+            ))}
+          </div>
+        </div>
 
         {error && (
           <div className="text-red-400 text-sm">{error}</div>
@@ -76,7 +112,7 @@ export const ImportWallet: React.FC<ImportWalletProps> = ({ onImport, onBack }) 
         variant="primary"
         size="lg"
         className="w-full"
-        disabled={!password || !mnemonic}
+        disabled={!password || words.some(w => !w)}
       >
         导入钱包
       </Button>

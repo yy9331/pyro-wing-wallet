@@ -3,11 +3,12 @@ import { Button } from "../components/Button"
 import { Input } from "../components/Input"
 
 interface CreateWalletProps {
-  onCreate: (password: string, mnemonic?: string) => void
+  onCreate: (password: string, mnemonic?: string) => Promise<string | void>
   onBack: () => void
+  onBackupDone: () => void
 }
 
-export const CreateWallet: React.FC<CreateWalletProps> = ({ onCreate, onBack }) => {
+export const CreateWallet: React.FC<CreateWalletProps> = ({ onCreate, onBack, onBackupDone }) => {
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [mnemonic, setMnemonic] = useState("")
@@ -29,8 +30,11 @@ export const CreateWallet: React.FC<CreateWalletProps> = ({ onCreate, onBack }) 
     }
 
     try {
-      // 创建钱包
-      const result = await onCreate(password, mnemonic || undefined)
+      // 不再让用户输入助记词，直接创建并返回系统生成的助记词
+      const result = await onCreate(password)
+      if (typeof result === "string" && result.length > 0) {
+        setMnemonic(result)
+      }
       setStep("backup")
     } catch (err: any) {
       setError(err.message || "创建失败")
@@ -38,8 +42,7 @@ export const CreateWallet: React.FC<CreateWalletProps> = ({ onCreate, onBack }) 
   }
 
   const handleBackup = () => {
-    setStep("input")
-    onBack()
+    onBackupDone()
   }
 
   if (step === "backup") {
@@ -123,12 +126,6 @@ export const CreateWallet: React.FC<CreateWalletProps> = ({ onCreate, onBack }) 
           placeholder="再次输入密码"
         />
 
-        <Input
-          label="导入助记词（可选）"
-          value={mnemonic}
-          onChange={setMnemonic}
-          placeholder="12个单词，用空格分隔"
-        />
 
         {error && (
           <div className="text-red-400 text-sm">{error}</div>

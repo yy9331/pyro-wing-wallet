@@ -1,7 +1,7 @@
-import { createPublicClient, createWalletClient, formatEther, http, parseEther } from "viem"
+import { createPublicClient, createWalletClient, formatEther, http, parseEther, type Account } from "viem"
 import { mainnet, sepolia } from "viem/chains"
 import { mnemonicToAccount, privateKeyToAccount } from "viem/accounts"
-import { generateMnemonic } from "bip39"
+import { generateMnemonic, validateMnemonic } from "bip39"
 import type { EncryptedPayload } from "./crypto"
 import { encryptJson, decryptJson } from "./crypto"
 
@@ -45,15 +45,15 @@ const loadFromIndexedDB = async <T = unknown>(): Promise<T | null> => {
   const transaction = db.transaction([STORE_NAME], "readonly")
   const store = transaction.objectStore(STORE_NAME)
   
-  const result = await new Promise((resolve, reject) => {
+  const result = await new Promise<any>((resolve, reject) => {
     const request = store.get("vault")
     request.onsuccess = () => resolve(request.result)
     request.onerror = () => reject(request.error)
   })
   
-  if (result && result.data) {
+  if (result && (result as any).data) {
     console.log("从 IndexedDB 找到钱包数据")
-    return result.data as T
+    return (result as any).data as T
   }
   return null
 }
@@ -126,7 +126,7 @@ const loadVaultFromStorage = async <T = unknown>(): Promise<T | null> => {
 type VaultData = { mnemonic?: string; privateKey?: string }
 type NetworkId = "sepolia" | "mainnet"
 
-let currentAccount: ReturnType<typeof mnemonicToAccount> | null = null
+let currentAccount: Account | null = null
 let publicClient = createPublicClient({ chain: sepolia, transport: http() })
 let walletClient: ReturnType<typeof createWalletClient> | null = null
 
@@ -140,6 +140,12 @@ export const setNetwork = (net: NetworkId): void => {
 
 export const createVault = async (password: string, maybeMnemonic?: string): Promise<{ mnemonic: string }> => {
   const mnemonic = maybeMnemonic?.trim() || generateMnemonic(128)
+  
+  // 如果用户传入助记词，进行合法性校验
+  if (maybeMnemonic && !validateMnemonic(mnemonic)) {
+    throw new Error("Invalid mnemonic")
+  }
+  
   const encrypted = await encryptJson({ mnemonic }, password)
   await saveVaultToStorage(encrypted)
   return { mnemonic } // 仅在创建阶段返回，供用户备份；不会存明文
@@ -179,10 +185,10 @@ export const unlockVault = async (password: string): Promise<void> => {
     
     walletClient = createWalletClient({
       chain: publicClient.chain!,
-      account: currentAccount,
+      account: currentAccount as Account,
       transport: http()
     })
-    console.log("钱包已解锁，地址:", currentAccount.address)
+    console.log("钱包已解锁，地址:", currentAccount!.address)
   } catch (error) {
     console.error("解密失败:", error)
     throw new Error("密码错误或数据损坏")

@@ -18,34 +18,10 @@ const call = async<T = any>(msg: any): Promise<T> => {
   }) as Promise<T>
 }
 
-// localStorage 辅助函数
-const saveToLocalStorage = (key: string, data: any) => {
-  try {
-    localStorage.setItem(key, JSON.stringify(data))
-    console.log(`数据已保存到 localStorage: ${key}`)
-  } catch (error) {
-    console.error("保存到 localStorage 失败:", error)
-  }
-}
-
-const loadFromLocalStorage = (key: string) => {
-  try {
-    const data = localStorage.getItem(key)
-    if (data) {
-      const parsed = JSON.parse(data)
-      console.log(`从 localStorage 加载数据: ${key}`)
-      return parsed
-    }
-  } catch (error) {
-    console.error("从 localStorage 加载失败:", error)
-  }
-  return null
-}
-
 // 页面类型
 type Page = "welcome" | "create" | "import" | "importPrivateKey" | "unlock" | "assets" | "send" | "receive" | "settings"
 
-function IndexPopup() {
+const IndexPopup = () => {
   // 状态管理
   const [currentPage, setCurrentPage] = useState<Page>("welcome")
   const [network, setNetwork] = useState("sepolia")
@@ -120,8 +96,8 @@ function IndexPopup() {
         mnemonic
       })
       if (res.ok) {
+        // 不跳转，返回助记词以便在创建页展示备份步骤
         setHasVault(true)
-        setCurrentPage("unlock")
         return res.mnemonic
       } else {
         throw new Error(res.error || "创建失败")
@@ -244,6 +220,7 @@ function IndexPopup() {
           <CreateWallet
             onCreate={handleCreateWallet}
             onBack={() => setCurrentPage("welcome")}
+            onBackupDone={() => setCurrentPage("unlock")}
           />
         )
       case "import":
