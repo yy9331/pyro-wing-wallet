@@ -1,5 +1,6 @@
 import {
   createVault,
+  createVaultFromPrivateKey,
   hasVault,
   unlockVault,
   getAddress,
@@ -10,6 +11,7 @@ import {
 
 type Msg =
   | { type: "wallet:createVault"; password: string; mnemonic?: string }
+  | { type: "wallet:createVaultFromPrivateKey"; password: string; privateKey: string }
   | { type: "wallet:hasVault" }
   | { type: "wallet:unlock"; password: string }
   | { type: "wallet:getAddress" }
@@ -27,6 +29,11 @@ chrome.runtime.onMessage.addListener((msg: Msg, _sender, sendResponse) => {
         case "wallet:createVault": {
           const res = await createVault(msg.password, msg.mnemonic)
           sendResponse({ ok: true, mnemonic: res.mnemonic })
+          break
+        }
+        case "wallet:createVaultFromPrivateKey": {
+          await createVaultFromPrivateKey(msg.password, msg.privateKey)
+          sendResponse({ ok: true })
           break
         }
         case "wallet:hasVault": {

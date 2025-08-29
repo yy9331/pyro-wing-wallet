@@ -1,55 +1,129 @@
 import { createPublicClient, createWalletClient, formatEther, http, parseEther } from "viem"
 import { mainnet, sepolia } from "viem/chains"
-import { mnemonicToAccount } from "viem/accounts"
+import { mnemonicToAccount, privateKeyToAccount } from "viem/accounts"
 import { generateMnemonic } from "bip39"
 import type { EncryptedPayload } from "./crypto"
 import { encryptJson, decryptJson } from "./crypto"
-// 使用内存存储作为临时解决方案
-let vaultData: unknown = null
 
+// IndexedDB 备选存储方案
+const DB_NAME = "PyroWingWallet"
+const DB_VERSION = 1
+const STORE_NAME = "vault"
+
+const getDB = (): Promise<IDBDatabase> => {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, DB_VERSION)
+    
+    request.onerror = () => reject(request.error)
+    request.onsuccess = () => resolve(request.result)
+    
+    request.onupgradeneeded = (event) => {
+      const db = (event.target as IDBOpenDBRequest).result
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        db.createObjectStore(STORE_NAME, { keyPath: "id" })
+      }
+    }
+  })
+}
+
+const saveToIndexedDB = async (encrypted: unknown) => {
+  const db = await getDB()
+  const transaction = db.transaction([STORE_NAME], "readwrite")
+  const store = transaction.objectStore(STORE_NAME)
+  
+  await new Promise((resolve, reject) => {
+    const request = store.put({ id: "vault", data: encrypted })
+    request.onsuccess = () => resolve(request.result)
+    request.onerror = () => reject(request.error)
+  })
+  
+  console.log("钱包数据已保存到 IndexedDB")
+}
+
+const loadFromIndexedDB = async <T = unknown>(): Promise<T | null> => {
+  const db = await getDB()
+  const transaction = db.transaction([STORE_NAME], "readonly")
+  const store = transaction.objectStore(STORE_NAME)
+  
+  const result = await new Promise((resolve, reject) => {
+    const request = store.get("vault")
+    request.onsuccess = () => resolve(request.result)
+    request.onerror = () => reject(request.error)
+  })
+  
+  if (result && result.data) {
+    console.log("从 IndexedDB 找到钱包数据")
+    return result.data as T
+  }
+  return null
+}
+// 使用 Chrome Storage API 作为持久化存储
 const saveVaultToStorage = async (encrypted: unknown) => {
   try {
-    // 优先使用 Chrome Storage API
-    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
-      await chrome.storage.local.set({ "pyro-wing-wallet-vault": encrypted })
-      vaultData = encrypted // 同时保存到内存
+    console.log("使用 Chrome Storage API 保存钱包数据...")
+    console.log("当前环境:", typeof window !== 'undefined' ? 'popup' : 'service worker')
+    console.log("chrome 对象:", typeof chrome)
+    console.log("chrome.storage:", chrome?.storage)
+    console.log("chrome.storage.local:", chrome?.storage?.local)
+    
+    // 确保在正确的上下文中
+    if (typeof chrome === 'undefined' || !chrome.storage || !chrome.storage.local) {
+      console.error("Chrome Storage API 不可用，尝试使用备选方案")
+      // 使用备选方案：IndexedDB
+      await saveToIndexedDB(encrypted)
       return
     }
     
-    // 如果 Chrome Storage 不可用，使用内存存储
-    vaultData = encrypted
-    console.log("使用内存存储（临时方案）")
-    return
+    await chrome.storage.local.set({ "pyro-wing-wallet-vault": encrypted })
+    console.log("钱包数据已保存到 Chrome Storage")
   } catch (error) {
     console.error("保存金库失败:", error)
-    // 即使 Chrome Storage 失败，也保存到内存
-    vaultData = encrypted
-    console.log("Chrome Storage 失败，使用内存存储")
+    // 尝试使用备选方案
+    try {
+      await saveToIndexedDB(encrypted)
+    } catch (fallbackError) {
+      console.error("备选方案也失败:", fallbackError)
+      throw error
+    }
   }
 }
 
 const loadVaultFromStorage = async <T = unknown>(): Promise<T | null> => {
   try {
-    // 优先使用 Chrome Storage API
+    console.log("从 Chrome Storage API 加载钱包数据...")
+    console.log("当前环境:", typeof window !== 'undefined' ? 'popup' : 'service worker')
+    
+    // 优先尝试 Chrome Storage API
     if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
-      const res = await chrome.storage.local.get("pyro-wing-wallet-vault")
-      const data = res["pyro-wing-wallet-vault"]
-      if (data) {
-        vaultData = data // 同步到内存
-        return data as T
+      try {
+        const result = await chrome.storage.local.get("pyro-wing-wallet-vault")
+        const data = result["pyro-wing-wallet-vault"]
+        
+        if (data) {
+          console.log("从 Chrome Storage 找到钱包数据")
+          return data as T
+        }
+      } catch (chromeError) {
+        console.error("Chrome Storage 加载失败:", chromeError)
       }
     }
     
-    // 如果 Chrome Storage 不可用或没有数据，使用内存存储
-    return vaultData as T | null
+    // 备选方案：IndexedDB
+    console.log("尝试从 IndexedDB 加载钱包数据...")
+    const indexedDBData = await loadFromIndexedDB<T>()
+    if (indexedDBData) {
+      return indexedDBData
+    }
+    
+    console.log("没有找到钱包数据")
+    return null
   } catch (error) {
     console.error("加载金库失败:", error)
-    // 返回内存中的数据
-    return vaultData as T | null
+    return null
   }
 }
 
-type VaultData = { mnemonic: string }
+type VaultData = { mnemonic?: string; privateKey?: string }
 type NetworkId = "sepolia" | "mainnet"
 
 let currentAccount: ReturnType<typeof mnemonicToAccount> | null = null
@@ -71,21 +145,48 @@ export const createVault = async (password: string, maybeMnemonic?: string): Pro
   return { mnemonic } // 仅在创建阶段返回，供用户备份；不会存明文
 }
 
+export const createVaultFromPrivateKey = async (password: string, privateKey: string): Promise<void> => {
+  const encrypted = await encryptJson({ privateKey }, password)
+  await saveVaultToStorage(encrypted)
+}
+
 export const hasVault = async (): Promise<boolean> => {
   const v = await loadVaultFromStorage()
+  console.log("检查钱包是否存在:", !!v)
   return !!v
 }
 
 export const unlockVault = async (password: string): Promise<void> => {
+  console.log("尝试解锁钱包...")
   const encrypted = await loadVaultFromStorage<EncryptedPayload>()
-  if (!encrypted) throw new Error("Vault not found")
-  const { mnemonic } = await decryptJson<VaultData>(encrypted, password)
-  currentAccount = mnemonicToAccount(mnemonic)
-  walletClient = createWalletClient({
-    chain: publicClient.chain!,
-    account: currentAccount,
-    transport: http()
-  })
+  if (!encrypted) {
+    console.error("未找到钱包数据")
+    throw new Error("Vault not found")
+  }
+  console.log("找到加密的钱包数据，尝试解密...")
+  
+  try {
+    const vaultData = await decryptJson<VaultData>(encrypted, password)
+    console.log("解密成功，钱包数据类型:", vaultData.mnemonic ? "助记词" : "私钥")
+    
+    if (vaultData.mnemonic) {
+      currentAccount = mnemonicToAccount(vaultData.mnemonic)
+    } else if (vaultData.privateKey) {
+      currentAccount = privateKeyToAccount(vaultData.privateKey as `0x${string}`)
+    } else {
+      throw new Error("Invalid vault data")
+    }
+    
+    walletClient = createWalletClient({
+      chain: publicClient.chain!,
+      account: currentAccount,
+      transport: http()
+    })
+    console.log("钱包已解锁，地址:", currentAccount.address)
+  } catch (error) {
+    console.error("解密失败:", error)
+    throw new Error("密码错误或数据损坏")
+  }
 }
 
 export const getAddress = (): string | null => {

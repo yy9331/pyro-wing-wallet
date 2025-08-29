@@ -11,7 +11,7 @@ const manifest = {
     "48": "icons/icon48.png",
     "128": "icons/icon128.png",
   },
-  permissions: ["storage"],
+  permissions: ["storage", "unlimitedStorage"],
   host_permissions: ["<all_urls>"],
 }
 

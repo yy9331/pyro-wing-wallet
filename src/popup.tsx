@@ -6,6 +6,7 @@ import { Tabs } from "./components/Tabs"
 import { Welcome } from "./pages/Welcome"
 import { CreateWallet } from "./pages/CreateWallet"
 import { ImportWallet } from "./pages/ImportWallet"
+import { ImportPrivateKey } from "./pages/ImportPrivateKey"
 import { Unlock } from "./pages/Unlock"
 import { Assets } from "./pages/Assets"
 import { Send } from "./pages/Send"
@@ -17,8 +18,32 @@ const call = async<T = any>(msg: any): Promise<T> => {
   }) as Promise<T>
 }
 
+// localStorage 辅助函数
+const saveToLocalStorage = (key: string, data: any) => {
+  try {
+    localStorage.setItem(key, JSON.stringify(data))
+    console.log(`数据已保存到 localStorage: ${key}`)
+  } catch (error) {
+    console.error("保存到 localStorage 失败:", error)
+  }
+}
+
+const loadFromLocalStorage = (key: string) => {
+  try {
+    const data = localStorage.getItem(key)
+    if (data) {
+      const parsed = JSON.parse(data)
+      console.log(`从 localStorage 加载数据: ${key}`)
+      return parsed
+    }
+  } catch (error) {
+    console.error("从 localStorage 加载失败:", error)
+  }
+  return null
+}
+
 // 页面类型
-type Page = "welcome" | "create" | "import" | "unlock" | "assets" | "send" | "receive" | "settings"
+type Page = "welcome" | "create" | "import" | "importPrivateKey" | "unlock" | "assets" | "send" | "receive" | "settings"
 
 function IndexPopup() {
   // 状态管理
@@ -36,13 +61,19 @@ function IndexPopup() {
 
   const checkWalletStatus = async () => {
     try {
+      console.log("检查钱包状态...")
+      
+      // 直接从 background 获取钱包状态
       const vaultRes = await call<{ ok: boolean }>({ type: "wallet:hasVault" })
+      console.log("Background 钱包状态:", vaultRes.ok)
       setHasVault(vaultRes.ok)
       
       if (vaultRes.ok) {
-        // 如果有金库，尝试获取地址
+        // 检查是否已解锁
         const addrRes = await call<{ ok: boolean; address: string | null }>({ type: "wallet:getAddress" })
         if (addrRes.ok && addrRes.address) {
+          // 已解锁，直接进入资产页面
+          console.log("钱包已解锁，地址:", addrRes.address)
           setAddress(addrRes.address)
           setIsUnlocked(true)
           setCurrentPage("assets")
@@ -52,11 +83,13 @@ function IndexPopup() {
             setBalance(balRes.balance)
           }
         } else {
-          // 有金库但未解锁
+          // 有金库但未解锁，显示解锁页面
+          console.log("钱包存在但未解锁")
           setCurrentPage("unlock")
         }
       } else {
         // 没有金库，显示欢迎页面
+        console.log("钱包不存在，显示欢迎页面")
         setCurrentPage("welcome")
       }
     } catch (error) {
@@ -109,13 +142,40 @@ function IndexPopup() {
       })
       if (res.ok) {
         setHasVault(true)
-        setCurrentPage("unlock")
+        // 导入成功后直接解锁并进入资产页面
+        await handleUnlock(password)
       } else {
         throw new Error(res.error || "导入失败")
       }
     } catch (error: any) {
       throw new Error(error.message || "导入失败")
     }
+  }
+
+  // 导入私钥
+  const handleImportPrivateKey = async (password: string, privateKey: string) => {
+    try {
+      const res = await call<{ ok: boolean; error?: string }>({
+        type: "wallet:createVaultFromPrivateKey",
+        password,
+        privateKey
+      })
+      if (res.ok) {
+        setHasVault(true)
+        // 导入成功后直接解锁并进入资产页面
+        await handleUnlock(password)
+      } else {
+        throw new Error(res.error || "导入失败")
+      }
+    } catch (error: any) {
+      throw new Error(error.message || "导入失败")
+    }
+  }
+
+  // 处理"我已有钱包"点击
+  const handleIHaveWallet = () => {
+    // 直接进入解锁页面，让用户输入密码
+    setCurrentPage("unlock")
   }
 
   // 解锁钱包
@@ -174,7 +234,9 @@ function IndexPopup() {
           <Welcome
             onCreateWallet={() => setCurrentPage("create")}
             onImportWallet={() => setCurrentPage("import")}
+            onImportPrivateKey={() => setCurrentPage("importPrivateKey")}
             onScanQR={() => alert("扫描功能开发中...")}
+            onIHaveWallet={handleIHaveWallet}
           />
         )
       case "create":
@@ -188,6 +250,13 @@ function IndexPopup() {
         return (
           <ImportWallet
             onImport={handleImportWallet}
+            onBack={() => setCurrentPage("welcome")}
+          />
+        )
+      case "importPrivateKey":
+        return (
+          <ImportPrivateKey
+            onImport={handleImportPrivateKey}
             onBack={() => setCurrentPage("welcome")}
           />
         )
@@ -238,7 +307,7 @@ function IndexPopup() {
   }
 
   // 如果当前页面是欢迎、创建、导入或解锁页面，不显示布局
-  if (["welcome", "create", "import", "unlock"].includes(currentPage)) {
+  if (["welcome", "create", "import", "importPrivateKey", "unlock"].includes(currentPage)) {
     return (
       <Layout>
         <Content className="p-0">
