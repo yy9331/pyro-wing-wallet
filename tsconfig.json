@@ -2,7 +2,7 @@
   "compilerOptions": {
     "module": "nodenext",
     "target": "esnext",
-    "types": [],
+    "types": ["chrome"],
     "sourceMap": true,
     "declaration": true,
     "declarationMap": true,
