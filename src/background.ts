@@ -1,15 +1,27 @@
-import { createVault, hasVault, unlockVault, getAddress, getBalance, sendTransaction, setNetwork } from "./lib/wallet"
+import {
+  createVault,
+  hasVault,
+  unlockVault,
+  getAddress,
+  getBalance,
+  sendTransaction,
+  setNetwork
+} from "./lib/wallet"
 
-type Msg = { type: "wallet:createVault"; password: string; mnemonic?: string }
+type Msg =
+  | { type: "wallet:createVault"; password: string; mnemonic?: string }
   | { type: "wallet:hasVault" }
   | { type: "wallet:unlock"; password: string }
   | { type: "wallet:getAddress" }
   | { type: "wallet:getBalance" }
   | { type: "wallet:sendTx"; to: `0x${string}`; valueEth: string }
   | { type: "wallet:setNetwork"; net: "sepolia" | "mainnet" }
+  | { type: "storage:saveVault"; data: unknown }
+  | { type: "storage:loadVault" }
+  | { type: "storage:clearVault" }
 
 chrome.runtime.onMessage.addListener((msg: Msg, _sender, sendResponse) => {
-  (async () => {
+  ;(async () => {
     try {
       switch (msg.type) {
         case "wallet:createVault": {
@@ -46,6 +58,7 @@ chrome.runtime.onMessage.addListener((msg: Msg, _sender, sendResponse) => {
           sendResponse({ ok: true })
           break
         }
+
         default:
           sendResponse({ ok: false, error: "unknown_message" })
       }
