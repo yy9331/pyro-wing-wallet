@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react"
+import { useEffect, useState } from "react"
 import "./style.css"
 import { Layout, Header, Content } from "./components/Layout"
 import { WalletHeader } from "./components/Header"

@@ -199,9 +199,42 @@ export const getAddress = (): string | null => {
   return currentAccount?.address ?? null
 }
 
-export const getPrivateKey = async (password: string): Promise<string> => {
-  if (!currentAccount) throw new Error("Wallet locked")
+export const getMnemonic = async (password: string): Promise<string> => {
+  // 重新验证密码并获取助记词
+  const encrypted = await loadVaultFromStorage<EncryptedPayload>()
+  if (!encrypted) {
+    throw new Error("Vault not found")
+  }
   
+  try {
+    const vaultData = await decryptJson<VaultData>(encrypted, password)
+    
+    if (vaultData.mnemonic) {
+      // 从助记词导出私钥
+      const account = mnemonicToAccount(vaultData.mnemonic)
+      // 获取私钥
+      const hdKey = account.getHdKey()
+      const privateKey = hdKey.privateKey
+      if (privateKey) {
+        // 确保正确转换为十六进制字符串
+        const hexString = Array.from(privateKey).map(b => b.toString(16).padStart(2, '0')).join('')
+        return `0x${hexString}`
+      } else {
+        throw new Error("无法从助记词导出私钥")
+      }
+    } else if (vaultData.privateKey) {
+      // 如果是从私钥创建的，直接返回私钥
+      return vaultData.privateKey
+    } else {
+      throw new Error("No mnemonic found")
+    }
+  } catch (error) {
+    console.error("获取私钥失败:", error)
+    throw new Error("密码错误或数据损坏")
+  }
+}
+
+export const getPrivateKey = async (password: string): Promise<string> => {
   // 重新验证密码并获取私钥
   const encrypted = await loadVaultFromStorage<EncryptedPayload>()
   if (!encrypted) {
@@ -214,9 +247,8 @@ export const getPrivateKey = async (password: string): Promise<string> => {
     if (vaultData.privateKey) {
       return vaultData.privateKey
     } else if (vaultData.mnemonic) {
-      // 如果是从助记词创建的，需要从助记词导出私钥
-      const account = mnemonicToAccount(vaultData.mnemonic)
-      return account.privateKey
+      // 如果是从助记词创建的，提示用户
+      throw new Error("此钱包由助记词创建，请使用助记词导出私钥")
     } else {
       throw new Error("No private key found")
     }

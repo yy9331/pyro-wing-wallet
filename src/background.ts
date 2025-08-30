@@ -9,7 +9,8 @@ import {
   sendTransaction,
   sendErc20Transaction,
   setNetwork,
-  getPrivateKey
+  getPrivateKey,
+  getMnemonic
 } from "./lib/wallet"
 
 type Msg =
@@ -24,6 +25,7 @@ type Msg =
   | { type: "wallet:sendErc20"; token: `0x${string}`; to: `0x${string}`; amount: string; decimals: number }
   | { type: "wallet:setNetwork"; net: "sepolia" | "mainnet" }
   | { type: "wallet:getPrivateKey"; password: string }
+  | { type: "wallet:getMnemonic"; password: string }
   | { type: "storage:saveVault"; data: unknown }
   | { type: "storage:loadVault" }
   | { type: "storage:clearVault" }
@@ -84,6 +86,11 @@ chrome.runtime.onMessage.addListener((msg: Msg, _sender, sendResponse) => {
         case "wallet:getPrivateKey": {
           const privateKey = await getPrivateKey(msg.password)
           sendResponse({ ok: true, privateKey })
+          break
+        }
+        case "wallet:getMnemonic": {
+          const mnemonic = await getMnemonic(msg.password)
+          sendResponse({ ok: true, mnemonic })
           break
         }
 

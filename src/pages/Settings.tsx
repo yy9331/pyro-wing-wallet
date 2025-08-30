@@ -9,7 +9,9 @@ interface SettingsProps {
 
 export const Settings: React.FC<SettingsProps> = ({ onBack, onLogout, address }) => {
   const [showPrivateKey, setShowPrivateKey] = useState(false)
+  const [showMnemonic] = useState(false)
   const [privateKey, setPrivateKey] = useState("")
+  const [mnemonic, setMnemonic] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
 
@@ -20,7 +22,20 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, onLogout, address })
     }
 
     try {
-      // 调用后台获取私钥
+      // 先尝试获取助记词导出的私钥（因为大多数钱包都是助记词创建的）
+      const mnemonicRes = await chrome.runtime.sendMessage({
+        type: "wallet:getMnemonic",
+        password
+      })
+      
+      if (mnemonicRes.ok && mnemonicRes.mnemonic) {
+        setPrivateKey(mnemonicRes.mnemonic) // 这里返回的实际上是私钥
+        setShowPrivateKey(true)
+        setError("")
+        return
+      }
+      
+      // 如果助记词获取失败，尝试获取私钥
       const res = await chrome.runtime.sendMessage({
         type: "wallet:getPrivateKey",
         password
@@ -34,7 +49,7 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, onLogout, address })
         setError(res.error || "密码错误")
       }
     } catch (err: any) {
-      setError(err.message || "获取私钥失败")
+      setError(err.message || "获取失败")
     }
   }
 
@@ -43,14 +58,7 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, onLogout, address })
       navigator.clipboard.writeText(privateKey).then(() => {
         alert("私钥已复制到剪贴板")
       }).catch(() => {
-        // 降级方案
-        const textArea = document.createElement("textarea")
-        textArea.value = privateKey
-        document.body.appendChild(textArea)
-        textArea.select()
-        document.execCommand("copy")
-        document.body.removeChild(textArea)
-        alert("私钥已复制到剪贴板")
+        alert("复制失败，请手动复制")
       })
     }
   }
@@ -83,11 +91,11 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, onLogout, address })
         </div>
       </div>
 
-      {/* 私钥管理 */}
+      {/* 私钥/助记词管理 */}
       <div className="bg-gray-800 rounded-lg p-4">
-        <h3 className="text-lg font-medium text-white mb-3">私钥管理</h3>
+        <h3 className="text-lg font-medium text-white mb-3">密钥管理</h3>
         
-        {!showPrivateKey ? (
+        {!showPrivateKey && !showMnemonic ? (
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">输入密码</label>
@@ -111,7 +119,7 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, onLogout, address })
               className="w-full"
               disabled={!password}
             >
-              查看私钥
+              查看密钥
             </Button>
           </div>
         ) : (
@@ -159,7 +167,7 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, onLogout, address })
           <div className="text-red-200 text-sm">
             <p className="font-semibold mb-2">安全提醒：</p>
             <ul className="space-y-1">
-              <li>• 私钥是访问钱包的唯一凭证</li>
+              <li>• 私钥/助记词是访问钱包的唯一凭证</li>
               <li>• 不要分享给任何人</li>
               <li>• 不要在公共场所显示</li>
               <li>• 建议在安全环境下查看</li>
