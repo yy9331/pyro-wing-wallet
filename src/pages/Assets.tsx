@@ -1,5 +1,6 @@
-import React from "react"
+import React, { Suspense } from "react"
 import { Button } from "../components/Button"
+import { BalanceSkeleton, TokenSkeleton, CustomTokenSkeleton } from "../components/Skeleton"
 
 interface AssetsProps {
   balance: string
@@ -8,6 +9,51 @@ interface AssetsProps {
   onReceive: () => void
   onSwap: () => void
   onAddToken?: () => void
+  isLoading?: boolean
+  tokens?: { address: string; symbol: string }[]
+  tokenBalances?: { [address: string]: string }
+  onRefreshToken?: (address: string) => void
+  isTokensLoading?: boolean
+}
+
+// 余额显示组件
+const BalanceDisplay: React.FC<{ balance: string }> = ({ balance }) => {
+  return (
+    <div className="text-center">
+      <div className="text-3xl font-bold text-white mb-2">
+        {balance} ETH
+      </div>
+      <div className="text-sm text-gray-400">
+        ≈ $0.00 USD
+      </div>
+    </div>
+  )
+}
+
+// 代币列表组件
+const TokenList: React.FC<{ balance: string }> = ({ balance }) => {
+  return (
+    <div className="space-y-3">
+      <h3 className="text-lg font-semibold text-white">代币</h3>
+      <div className="bg-gray-800 rounded-lg p-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+              <span className="text-xs font-bold">ETH</span>
+            </div>
+            <div>
+              <div className="text-white font-medium">Ethereum</div>
+              <div className="text-sm text-gray-400">{balance} ETH</div>
+            </div>
+          </div>
+          <div className="text-right">
+            <div className="text-white font-medium">$0.00</div>
+            <div className="text-sm text-gray-400">0.00%</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
 }
 
 export const Assets: React.FC<AssetsProps> = ({
@@ -16,19 +62,23 @@ export const Assets: React.FC<AssetsProps> = ({
   onSend,
   onReceive,
   onSwap,
-  onAddToken
+  onAddToken,
+  isLoading = false,
+  tokens = [],
+  tokenBalances = {},
+  onRefreshToken,
+  isTokensLoading = false
 }) => {
   return (
     <div className="space-y-6">
       {/* 余额显示 */}
-      <div className="text-center">
-        <div className="text-3xl font-bold text-white mb-2">
-          {balance} ETH
-        </div>
-        <div className="text-sm text-gray-400">
-          ≈ $0.00 USD
-        </div>
-      </div>
+      <Suspense fallback={<BalanceSkeleton />}>
+        {isLoading ? (
+          <BalanceSkeleton />
+        ) : (
+          <BalanceDisplay balance={balance} />
+        )}
+      </Suspense>
 
       {/* 快速操作按钮 */}
       <div className="grid grid-cols-4 gap-3">
@@ -69,7 +119,7 @@ export const Assets: React.FC<AssetsProps> = ({
         </Button>
 
         <Button
-          onClick={onAddToken}
+          onClick={onAddToken || (() => {})}
           variant="secondary"
           size="md"
           className="flex flex-col items-center space-y-1"
@@ -82,27 +132,50 @@ export const Assets: React.FC<AssetsProps> = ({
       </div>
 
       {/* 代币列表 */}
-      <div className="space-y-3">
-        <h3 className="text-lg font-semibold text-white">代币</h3>
-        <div className="bg-gray-800 rounded-lg p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
-                <span className="text-xs font-bold">ETH</span>
+      <Suspense fallback={<TokenSkeleton />}>
+        {isLoading ? (
+          <TokenSkeleton />
+        ) : (
+          <TokenList balance={balance} />
+        )}
+      </Suspense>
+
+      {/* 自定义代币列表 */}
+      {tokens.length > 0 && (
+        <div className="space-y-2">
+          {isTokensLoading ? (
+            // 显示骨架屏
+            Array.from({ length: Math.min(tokens.length, 3) }).map((_, index) => (
+              <CustomTokenSkeleton key={index} />
+            ))
+          ) : (
+            // 显示实际代币
+            tokens.map((token) => (
+              <div key={token.address} className="bg-gray-800 rounded-lg p-3 flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center">
+                    <span className="text-xs font-bold">{token.symbol}</span>
+                  </div>
+                  <div>
+                    <div className="text-white font-medium">{token.symbol}</div>
+                    <div className="text-sm text-gray-400">
+                      {tokenBalances[token.address] ?? "-"}
+                    </div>
+                  </div>
+                </div>
+                {onRefreshToken && (
+                  <button
+                    onClick={() => onRefreshToken(token.address)}
+                    className="text-xs text-blue-400 hover:text-blue-300"
+                  >
+                    刷新
+                  </button>
+                )}
               </div>
-              <div>
-                <div className="text-white font-medium">Ethereum</div>
-                <div className="text-sm text-gray-400">{balance} ETH</div>
-              </div>
-            </div>
-            <div className="text-right">
-              <div className="text-white font-medium">$0.00</div>
-              <div className="text-sm text-gray-400">0.00%</div>
-            </div>
-          </div>
+            ))
+          )}
         </div>
-        {/* 未来：在 popup 中拉取并渲染自定义代币列表 */}
-      </div>
+      )}
     </div>
   )
 }

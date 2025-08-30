@@ -73,7 +73,7 @@ export const ImportPrivateKey: React.FC<ImportPrivateKeyProps> = ({
           label="设置密码"
           placeholder="用于加密钱包"
           value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          onChange={setPassword}
         />
         
         <Input
@@ -81,15 +81,15 @@ export const ImportPrivateKey: React.FC<ImportPrivateKeyProps> = ({
           label="确认密码"
           placeholder="再次输入密码"
           value={confirmPassword}
-          onChange={(e) => setConfirmPassword(e.target.value)}
+          onChange={setConfirmPassword}
         />
         
         <Input
-          type="password"
+          type="text"
           label="私钥"
           placeholder="输入你的私钥（0x开头）"
           value={privateKey}
-          onChange={(e) => setPrivateKey(e.target.value)}
+          onChange={setPrivateKey}
         />
 
         {error && (

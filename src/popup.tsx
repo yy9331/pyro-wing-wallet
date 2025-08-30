@@ -34,6 +34,8 @@ const IndexPopup = () => {
   const [hasVault, setHasVault] = useState(false)
   const [tokens, setTokens] = useState<CustomToken[]>([])
   const [tokenBalances, setTokenBalances] = useState<Record<string, string>>({})
+  const [isLoadingBalance, setIsLoadingBalance] = useState(false)
+  const [isTokensLoading, setIsTokensLoading] = useState(false)
 
   // 检查钱包状态
   useEffect(() => {
@@ -47,6 +49,78 @@ const IndexPopup = () => {
       if (raw) setTokens(JSON.parse(raw))
     } catch {}
   }, [])
+
+  // 智能加载代币余额
+  const loadTokenBalances = async (tokenList: CustomToken[], isInitialLoad = false) => {
+    if (tokenList.length === 0) return
+
+    // 设置loading状态
+    if (isInitialLoad) {
+      setIsTokensLoading(true)
+    }
+
+    // 分批加载：首次只加载前3个，其余后台加载
+    const initialBatch = isInitialLoad ? tokenList.slice(0, 3) : tokenList
+    const remainingBatch = isInitialLoad ? tokenList.slice(3) : []
+
+    // 加载初始批次
+    await Promise.all(
+      initialBatch.map(async (token: CustomToken) => {
+        try {
+          const tokenRes = await call<{ ok: boolean; balance?: string }>({ 
+            type: "wallet:getErc20", 
+            token: token.address 
+          })
+          if (tokenRes.ok && tokenRes.balance) {
+            setTokenBalances(prev => ({ ...prev, [token.address]: tokenRes.balance! }))
+          }
+        } catch (error) {
+          console.error(`加载代币 ${token.symbol} 余额失败:`, error)
+        }
+      })
+    )
+
+    // 标记初始加载完成
+    if (isInitialLoad) {
+      setIsTokensLoading(false)
+    }
+
+    // 后台加载剩余代币
+    if (remainingBatch.length > 0) {
+      setTimeout(async () => {
+        await Promise.all(
+          remainingBatch.map(async (token: CustomToken) => {
+            try {
+              const tokenRes = await call<{ ok: boolean; balance?: string }>({ 
+                type: "wallet:getErc20", 
+                token: token.address 
+              })
+              if (tokenRes.ok && tokenRes.balance) {
+                setTokenBalances(prev => ({ ...prev, [token.address]: tokenRes.balance! }))
+              }
+            } catch (error) {
+              console.error(`后台加载代币 ${token.symbol} 余额失败:`, error)
+            }
+          })
+        )
+      }, 100) // 延迟100ms，避免阻塞UI
+    }
+  }
+
+  // 加载单个代币余额
+  const loadSingleTokenBalance = async (tokenAddress: string) => {
+    try {
+      const tokenRes = await call<{ ok: boolean; balance?: string }>({ 
+        type: "wallet:getErc20", 
+        token: tokenAddress as `0x${string}` 
+      })
+      if (tokenRes.ok && tokenRes.balance) {
+        setTokenBalances(prev => ({ ...prev, [tokenAddress]: tokenRes.balance! }))
+      }
+    } catch (error) {
+      console.error(`加载代币余额失败:`, error)
+    }
+  }
 
   const checkWalletStatus = async () => {
     try {
@@ -67,9 +141,18 @@ const IndexPopup = () => {
           setIsUnlocked(true)
           setCurrentPage("assets")
           // 获取余额
+          setIsLoadingBalance(true)
           const balRes = await call<{ ok: boolean; balance?: string; error?: string }>({ type: "wallet:getBalance" })
           if (balRes.ok && balRes.balance) {
             setBalance(balRes.balance)
+          }
+          setIsLoadingBalance(false)
+          
+          // 自动加载自定义代币余额
+          const customTokens = JSON.parse(localStorage.getItem("pyro-custom-tokens") || "[]")
+          if (customTokens.length > 0) {
+            setTokens(customTokens)
+            await loadTokenBalances(customTokens, true)
           }
         } else {
           // 有金库但未解锁，显示解锁页面
@@ -90,6 +173,7 @@ const IndexPopup = () => {
   // 网络切换
   const handleNetworkChange = async (newNetwork: string) => {
     setNetwork(newNetwork)
+    setIsLoadingBalance(true)
     await call<{ ok: boolean }>({ type: "wallet:setNetwork", net: newNetwork as "sepolia" | "mainnet" })
     // 重新获取余额
     if (isUnlocked) {
@@ -98,6 +182,7 @@ const IndexPopup = () => {
         setBalance(balRes.balance)
       }
     }
+    setIsLoadingBalance(false)
   }
 
   // 创建钱包
@@ -336,6 +421,11 @@ const IndexPopup = () => {
                 alert(res.error || "查询失败")
               }
             }}
+            isLoading={isLoadingBalance}
+            tokens={tokens}
+            tokenBalances={tokenBalances}
+            onRefreshToken={loadSingleTokenBalance}
+            isTokensLoading={isTokensLoading}
           />
         )
       case "send":
@@ -471,31 +561,6 @@ const IndexPopup = () => {
         
         <div className="mt-4">
           {renderContent()}
-          {/* 渲染自定义代币 */}
-          {currentPage === "assets" && tokens.length > 0 && (
-            <div className="space-y-2 mt-4">
-              {tokens.map((t) => (
-                <div key={t.address} className="bg-gray-800 rounded-lg p-3 flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center">
-                      <span className="text-xs font-bold">{t.symbol}</span>
-                    </div>
-                    <div>
-                      <div className="text-white font-medium">{t.symbol}</div>
-                      <div className="text-sm text-gray-400">{tokenBalances[t.address] ?? "-"}</div>
-                    </div>
-                  </div>
-                  <button
-                    onClick={async () => {
-                      const res = await call<{ ok: boolean; balance?: string }>({ type: "wallet:getErc20", token: t.address })
-                      if (res.ok && res.balance) setTokenBalances((s) => ({ ...s, [t.address]: res.balance! }))
-                    }}
-                    className="text-xs text-blue-400 hover:text-blue-300"
-                  >刷新</button>
-                </div>
-              ))}
-            </div>
-          )}
         </div>
       </Content>
     </Layout>
