@@ -21,6 +21,8 @@ const call = async<T = any>(msg: any): Promise<T> => {
 // 页面类型
 type Page = "welcome" | "create" | "import" | "importPrivateKey" | "unlock" | "assets" | "send" | "receive" | "settings"
 
+type CustomToken = { address: `0x${string}`; symbol: string; decimals: number }
+
 const IndexPopup = () => {
   // 状态管理
   const [currentPage, setCurrentPage] = useState<Page>("welcome")
@@ -29,10 +31,20 @@ const IndexPopup = () => {
   const [balance, setBalance] = useState<string>("0")
   const [isUnlocked, setIsUnlocked] = useState(false)
   const [hasVault, setHasVault] = useState(false)
+  const [tokens, setTokens] = useState<CustomToken[]>([])
+  const [tokenBalances, setTokenBalances] = useState<Record<string, string>>({})
 
   // 检查钱包状态
   useEffect(() => {
     checkWalletStatus()
+  }, [])
+
+  // 加载自定义代币列表
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("pyro-custom-tokens")
+      if (raw) setTokens(JSON.parse(raw))
+    } catch {}
   }, [])
 
   const checkWalletStatus = async () => {
@@ -179,13 +191,28 @@ const IndexPopup = () => {
   }
 
   // 发送交易
-  const handleSend = async (to: string, amount: string) => {
+  const handleSend = async (to: string, amount: string, tokenAddress?: string, tokenDecimals?: number) => {
     try {
-      const res = await call<{ ok: boolean; hash?: string; error?: string }>({
-        type: "wallet:sendTx",
-        to: to as `0x${string}`,
-        valueEth: amount
-      })
+      let res: { ok: boolean; hash?: string; error?: string }
+      
+      if (tokenAddress && tokenDecimals) {
+        // 发送ERC20代币
+        res = await call<{ ok: boolean; hash?: string; error?: string }>({
+          type: "wallet:sendErc20",
+          token: tokenAddress as `0x${string}`,
+          to: to as `0x${string}`,
+          amount,
+          decimals: tokenDecimals
+        })
+      } else {
+        // 发送ETH
+        res = await call<{ ok: boolean; hash?: string; error?: string }>({
+          type: "wallet:sendTx",
+          to: to as `0x${string}`,
+          valueEth: amount
+        })
+      }
+      
       if (res.ok && res.hash) {
         alert(`交易已发送！\n交易哈希: ${res.hash}`)
         setCurrentPage("assets")
@@ -193,6 +220,13 @@ const IndexPopup = () => {
         const balRes = await call<{ ok: boolean; balance?: string; error?: string }>({ type: "wallet:getBalance" })
         if (balRes.ok && balRes.balance) {
           setBalance(balRes.balance)
+        }
+        // 如果发送的是ERC20代币，刷新代币余额
+        if (tokenAddress) {
+          const tokenRes = await call<{ ok: boolean; balance?: string }>({ type: "wallet:getErc20", token: tokenAddress as `0x${string}` })
+          if (tokenRes.ok && tokenRes.balance) {
+            setTokenBalances((s) => ({ ...s, [tokenAddress]: tokenRes.balance! }))
+          }
         }
       } else {
         alert(`发送失败: ${res.error}`)
@@ -252,12 +286,34 @@ const IndexPopup = () => {
             onSend={() => setCurrentPage("send")}
             onReceive={() => setCurrentPage("receive")}
             onSwap={() => alert("兑换功能开发中...")}
+            onAddToken={async () => {
+              let input = prompt("输入 ERC20 合约地址 (0x...)") || ""
+              input = input.trim()
+              if (!input) return
+              if (!input.startsWith("0x")) input = `0x${input}`
+              if (!/^0x[0-9a-fA-F]{40}$/.test(input)) {
+                alert("合约地址格式不正确")
+                return
+              }
+              const tokenAddr = input.toLowerCase() as `0x${string}`
+              const res = await call<{ ok: boolean; symbol?: string; balance?: string; decimals?: number; error?: string }>({ type: "wallet:getErc20", token: tokenAddr })
+              if (res.ok && res.symbol && typeof res.decimals === "number") {
+                const next = [...tokens, { address: tokenAddr, symbol: res.symbol, decimals: res.decimals }]
+                setTokens(next)
+                localStorage.setItem("pyro-custom-tokens", JSON.stringify(next))
+                if (res.balance) setTokenBalances((s) => ({ ...s, [tokenAddr]: res.balance! }))
+              } else {
+                alert(res.error || "查询失败")
+              }
+            }}
           />
         )
       case "send":
         return (
           <Send
             balance={balance}
+            tokens={tokens}
+            tokenBalances={tokenBalances}
             onSend={handleSend}
             onBack={() => setCurrentPage("assets")}
           />
@@ -322,6 +378,31 @@ const IndexPopup = () => {
         
         <div className="mt-4">
           {renderContent()}
+          {/* 渲染自定义代币 */}
+          {currentPage === "assets" && tokens.length > 0 && (
+            <div className="space-y-2 mt-4">
+              {tokens.map((t) => (
+                <div key={t.address} className="bg-gray-800 rounded-lg p-3 flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center">
+                      <span className="text-xs font-bold">{t.symbol}</span>
+                    </div>
+                    <div>
+                      <div className="text-white font-medium">{t.symbol}</div>
+                      <div className="text-sm text-gray-400">{tokenBalances[t.address] ?? "-"}</div>
+                    </div>
+                  </div>
+                  <button
+                    onClick={async () => {
+                      const res = await call<{ ok: boolean; balance?: string }>({ type: "wallet:getErc20", token: t.address })
+                      if (res.ok && res.balance) setTokenBalances((s) => ({ ...s, [t.address]: res.balance! }))
+                    }}
+                    className="text-xs text-blue-400 hover:text-blue-300"
+                  >刷新</button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </Content>
     </Layout>

@@ -5,7 +5,9 @@ import {
   unlockVault,
   getAddress,
   getBalance,
+  getErc20Balance,
   sendTransaction,
+  sendErc20Transaction,
   setNetwork
 } from "./lib/wallet"
 
@@ -16,7 +18,9 @@ type Msg =
   | { type: "wallet:unlock"; password: string }
   | { type: "wallet:getAddress" }
   | { type: "wallet:getBalance" }
+  | { type: "wallet:getErc20"; token: `0x${string}` }
   | { type: "wallet:sendTx"; to: `0x${string}`; valueEth: string }
+  | { type: "wallet:sendErc20"; token: `0x${string}`; to: `0x${string}`; amount: string; decimals: number }
   | { type: "wallet:setNetwork"; net: "sepolia" | "mainnet" }
   | { type: "storage:saveVault"; data: unknown }
   | { type: "storage:loadVault" }
@@ -55,8 +59,18 @@ chrome.runtime.onMessage.addListener((msg: Msg, _sender, sendResponse) => {
           sendResponse({ ok: true, balance: bal })
           break
         }
+        case "wallet:getErc20": {
+          const data = await getErc20Balance(msg.token)
+          sendResponse({ ok: true, ...data })
+          break
+        }
         case "wallet:sendTx": {
           const hash = await sendTransaction(msg.to, msg.valueEth)
+          sendResponse({ ok: true, hash })
+          break
+        }
+        case "wallet:sendErc20": {
+          const hash = await sendErc20Transaction(msg.token, msg.to, msg.amount, msg.decimals)
           sendResponse({ ok: true, hash })
           break
         }

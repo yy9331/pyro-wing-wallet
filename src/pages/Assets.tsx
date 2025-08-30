@@ -7,6 +7,7 @@ interface AssetsProps {
   onSend: () => void
   onReceive: () => void
   onSwap: () => void
+  onAddToken?: () => void
 }
 
 export const Assets: React.FC<AssetsProps> = ({
@@ -14,7 +15,8 @@ export const Assets: React.FC<AssetsProps> = ({
   address,
   onSend,
   onReceive,
-  onSwap
+  onSwap,
+  onAddToken
 }) => {
   return (
     <div className="space-y-6">
@@ -29,7 +31,7 @@ export const Assets: React.FC<AssetsProps> = ({
       </div>
 
       {/* 快速操作按钮 */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-4 gap-3">
         <Button
           onClick={onSend}
           variant="primary"
@@ -65,6 +67,18 @@ export const Assets: React.FC<AssetsProps> = ({
           </svg>
           <span className="text-xs">兑换</span>
         </Button>
+
+        <Button
+          onClick={onAddToken}
+          variant="secondary"
+          size="md"
+          className="flex flex-col items-center space-y-1"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+          <span className="text-xs">添加代币</span>
+        </Button>
       </div>
 
       {/* 代币列表 */}
@@ -87,6 +101,7 @@ export const Assets: React.FC<AssetsProps> = ({
             </div>
           </div>
         </div>
+        {/* 未来：在 popup 中拉取并渲染自定义代币列表 */}
       </div>
     </div>
   )

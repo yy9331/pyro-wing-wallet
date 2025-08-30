@@ -215,3 +215,49 @@ export const sendTransaction = async (to: `0x${string}`, valueEth: string): Prom
   })
   return hash as `0x${string}`
 }
+
+// ERC20 读取
+const ERC20_ABI = [
+  { name: "decimals", type: "function", stateMutability: "view", inputs: [], outputs: [{ type: "uint8" }] },
+  { name: "symbol", type: "function", stateMutability: "view", inputs: [], outputs: [{ type: "string" }] },
+  { name: "balanceOf", type: "function", stateMutability: "view", inputs: [{ name: "owner", type: "address" }], outputs: [{ type: "uint256" }] },
+  { name: "transfer", type: "function", stateMutability: "nonpayable", inputs: [{ name: "to", type: "address" }, { name: "amount", type: "uint256" }], outputs: [{ type: "bool" }] }
+] as const
+
+export const getErc20Balance = async (token: `0x${string}`): Promise<{ symbol: string; decimals: number; balance: string }> => {
+  if (!currentAccount) throw new Error("Wallet locked")
+  const [decimals, symbol, raw] = await Promise.all([
+    publicClient.readContract({ address: token, abi: ERC20_ABI, functionName: "decimals" }) as Promise<number>,
+    publicClient.readContract({ address: token, abi: ERC20_ABI, functionName: "symbol" }) as Promise<string>,
+    publicClient.readContract({ address: token, abi: ERC20_ABI, functionName: "balanceOf", args: [currentAccount.address] }) as Promise<bigint>
+  ])
+  // format using decimals
+  const divisor = BigInt(10) ** BigInt(decimals)
+  const integer = raw / divisor
+  const fraction = raw % divisor
+  const fracStr = fraction.toString().padStart(decimals, "0").replace(/0+$/, "")
+  const balance = fracStr ? `${integer.toString()}.${fracStr}` : integer.toString()
+  return { symbol, decimals, balance }
+}
+
+export const sendErc20Transaction = async (token: `0x${string}`, to: `0x${string}`, amount: string, decimals: number): Promise<`0x${string}`> => {
+  if (!walletClient || !currentAccount) throw new Error("Wallet locked")
+  
+  // 将金额转换为wei (考虑decimals)
+  const divisor = BigInt(10) ** BigInt(decimals)
+  const [integer, fraction] = amount.split('.')
+  const integerPart = BigInt(integer || '0')
+  const fractionPart = BigInt((fraction || '').padEnd(decimals, '0').slice(0, decimals))
+  const value = integerPart * divisor + fractionPart
+  
+  const hash = await walletClient.writeContract({
+    address: token,
+    abi: ERC20_ABI,
+    functionName: "transfer",
+    args: [to, value],
+    account: currentAccount,
+    chain: publicClient.chain
+  })
+  
+  return hash as `0x${string}`
+}
