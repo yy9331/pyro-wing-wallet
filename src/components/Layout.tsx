@@ -23,7 +23,7 @@ export const Header: React.FC<{ children: React.ReactNode }> = ({ children }) =>
 
 export const Content: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className = "" }) => {
   return (
-    <div className={`flex-1 overflow-y-auto p-4 ${className}`}>
+    <div className={`flex-1 overflow-y-auto p-4 scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-transparent ${className}`}>
       {children}
     </div>
   )

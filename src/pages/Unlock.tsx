@@ -25,28 +25,47 @@ export const Unlock: React.FC<UnlockProps> = ({ onUnlock, onBack }) => {
   }
 
   return (
-    <div className="flex flex-col items-center justify-center h-full p-6">
-      {/* 图标 */}
-      <div className="w-16 h-16 bg-gradient-to-r from-pink-400 to-purple-500 rounded-full flex items-center justify-center mb-6">
-        <span className="text-white text-2xl">🔒</span>
+    <div className="p-4 space-y-6">
+      {/* 标题 */}
+      <div className="flex items-center space-x-3">
+        <button
+          onClick={onBack}
+          className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
+        <h2 className="text-xl font-semibold text-white">解锁钱包</h2>
       </div>
 
-      {/* 标题 */}
-      <h2 className="text-2xl font-bold text-white mb-2">解锁钱包</h2>
-      <p className="text-gray-400 text-center mb-8">
-        输入密码以访问你的钱包
-      </p>
+      {/* 图标 */}
+      <div className="flex justify-center">
+        <div className="w-16 h-16 bg-gradient-to-r from-pink-400 to-purple-500 rounded-full flex items-center justify-center">
+          <span className="text-white text-2xl">🔒</span>
+        </div>
+      </div>
+
+      {/* 说明文字 */}
+      <div className="text-center">
+        <p className="text-gray-400">
+          输入密码以访问你的钱包
+        </p>
+      </div>
 
       {/* 密码输入 */}
-      <div className="w-full space-y-4 mb-6">
+      <div className="space-y-4">
         <Input
           label="密码"
           value={password}
           onChange={setPassword}
           type="password"
           placeholder="输入你的钱包密码"
-          error={error}
         />
+
+        {error && (
+          <div className="text-red-400 text-sm">{error}</div>
+        )}
       </div>
 
       {/* 解锁按钮 */}
@@ -54,7 +73,7 @@ export const Unlock: React.FC<UnlockProps> = ({ onUnlock, onBack }) => {
         onClick={handleUnlock}
         variant="primary"
         size="lg"
-        className="w-full mb-4"
+        className="w-full"
         disabled={!password}
       >
         解锁

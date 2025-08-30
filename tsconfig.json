@@ -10,13 +10,13 @@
     "exactOptionalPropertyTypes": true,
     "strict": true,
     "jsx": "react-jsx",
-    "verbatimModuleSyntax": true,
     "isolatedModules": true,
     "noUncheckedSideEffectImports": true,
     "moduleDetection": "force",
     "skipLibCheck": true
   },
   "include": [
-    ".plasmo/index.d.ts"
+    ".plasmo/index.d.ts",
+    "src/**/*"
   ]
 }

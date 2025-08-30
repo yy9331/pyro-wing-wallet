@@ -55,7 +55,7 @@ export const ImportWallet: React.FC<ImportWalletProps> = ({ onImport, onBack }) 
   }
 
   return (
-    <div className="space-y-6">
+    <div className="p-4 space-y-6">
       {/* 标题 */}
       <div className="flex items-center space-x-3">
         <button

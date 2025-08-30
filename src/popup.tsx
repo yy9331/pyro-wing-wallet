@@ -10,6 +10,7 @@ import { ImportPrivateKey } from "./pages/ImportPrivateKey"
 import { Unlock } from "./pages/Unlock"
 import { Assets } from "./pages/Assets"
 import { Send } from "./pages/Send"
+import { Settings } from "./pages/Settings"
 
 // 消息通信函数
 const call = async<T = any>(msg: any): Promise<T> => {
@@ -236,6 +237,36 @@ const IndexPopup = () => {
     }
   }
 
+  // 复制地址
+  const handleCopyAddress = async () => {
+    if (!address) return
+    
+    try {
+      await navigator.clipboard.writeText(address)
+      alert("地址已复制到剪贴板")
+    } catch (error) {
+      console.error("复制失败:", error)
+      // 降级方案：使用传统的复制方法
+      const textArea = document.createElement("textarea")
+      textArea.value = address
+      document.body.appendChild(textArea)
+      textArea.select()
+      document.execCommand("copy")
+      document.body.removeChild(textArea)
+      alert("地址已复制到剪贴板")
+    }
+  }
+
+  // 退出钱包
+  const handleLogout = () => {
+    if (confirm("确定要退出钱包吗？")) {
+      setIsUnlocked(false)
+      setAddress("")
+      setBalance("0")
+      setCurrentPage("unlock")
+    }
+  }
+
   // 渲染页面内容
   const renderContent = () => {
     switch (currentPage) {
@@ -245,7 +276,6 @@ const IndexPopup = () => {
             onCreateWallet={() => setCurrentPage("create")}
             onImportWallet={() => setCurrentPage("import")}
             onImportPrivateKey={() => setCurrentPage("importPrivateKey")}
-            onScanQR={() => alert("扫描功能开发中...")}
             onIHaveWallet={handleIHaveWallet}
           />
         )
@@ -320,19 +350,80 @@ const IndexPopup = () => {
         )
       case "receive":
         return (
-          <div className="text-center space-y-4">
-            <h2 className="text-xl font-semibold text-white">接收</h2>
-            <div className="bg-gray-800 rounded-lg p-4">
-              <div className="text-sm text-gray-400 mb-2">你的地址</div>
-              <div className="text-white font-mono text-sm break-all">{address || "未连接"}</div>
+          <div className="space-y-6">
+            {/* 标题 */}
+            <div className="flex items-center space-x-3">
+              <button
+                onClick={() => setCurrentPage("assets")}
+                className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
+              <h2 className="text-xl font-semibold text-white">接收</h2>
             </div>
-            <button 
-              onClick={() => setCurrentPage("assets")}
-              className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors w-full"
-            >
-              返回
-            </button>
+
+            {/* 二维码 */}
+            <div className="text-center space-y-4">
+              <div className="bg-white rounded-lg p-4 inline-block">
+                <img
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(address || "")}`}
+                  alt="钱包地址二维码"
+                  className="w-48 h-48"
+                  onError={(e) => {
+                    // 如果二维码加载失败，显示备用文本
+                    const target = e.target as HTMLImageElement
+                    target.style.display = 'none'
+                    target.nextElementSibling?.classList.remove('hidden')
+                  }}
+                />
+                <div className="hidden text-gray-800 text-sm font-mono break-all p-2">
+                  {address || "未连接"}
+                </div>
+              </div>
+              
+              <div className="text-sm text-gray-400">
+                扫描二维码或复制地址来接收代币
+              </div>
+            </div>
+
+            {/* 地址显示和复制 */}
+            <div className="space-y-3">
+              <div className="text-sm text-gray-400">你的钱包地址</div>
+              <div className="bg-gray-800 rounded-lg p-4">
+                <div className="text-white font-mono text-sm break-all mb-3">
+                  {address || "未连接"}
+                </div>
+                <button
+                  onClick={handleCopyAddress}
+                  className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm"
+                >
+                  复制地址
+                </button>
+              </div>
+            </div>
+
+            {/* 安全提示 */}
+            <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-4">
+              <div className="text-sm text-blue-300">
+                <div className="font-medium mb-2">安全提示：</div>
+                <ul className="space-y-1 text-xs">
+                  <li>• 只向此地址发送支持的代币</li>
+                  <li>• 确保网络选择正确</li>
+                  <li>• 小额测试后再进行大额转账</li>
+                </ul>
+              </div>
+            </div>
           </div>
+        )
+      case "settings":
+        return (
+          <Settings
+            onBack={() => setCurrentPage("assets")}
+            onLogout={handleLogout}
+            address={address}
+          />
         )
       default:
         return <div>页面不存在</div>
@@ -343,9 +434,9 @@ const IndexPopup = () => {
   if (["welcome", "create", "import", "importPrivateKey", "unlock"].includes(currentPage)) {
     return (
       <Layout>
-        <Content className="p-0">
+        <div className="flex-1">
           {renderContent()}
-        </Content>
+        </div>
       </Layout>
     )
   }
@@ -358,7 +449,9 @@ const IndexPopup = () => {
           network={network}
           address={address}
           onNetworkChange={handleNetworkChange}
-          onSettingsClick={() => alert("设置功能开发中...")}
+          onSettingsClick={() => setCurrentPage("settings")}
+          onCopyAddress={handleCopyAddress}
+          onLogout={handleLogout}
         />
       </Header>
 

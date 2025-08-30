@@ -199,6 +199,33 @@ export const getAddress = (): string | null => {
   return currentAccount?.address ?? null
 }
 
+export const getPrivateKey = async (password: string): Promise<string> => {
+  if (!currentAccount) throw new Error("Wallet locked")
+  
+  // 重新验证密码并获取私钥
+  const encrypted = await loadVaultFromStorage<EncryptedPayload>()
+  if (!encrypted) {
+    throw new Error("Vault not found")
+  }
+  
+  try {
+    const vaultData = await decryptJson<VaultData>(encrypted, password)
+    
+    if (vaultData.privateKey) {
+      return vaultData.privateKey
+    } else if (vaultData.mnemonic) {
+      // 如果是从助记词创建的，需要从助记词导出私钥
+      const account = mnemonicToAccount(vaultData.mnemonic)
+      return account.privateKey
+    } else {
+      throw new Error("No private key found")
+    }
+  } catch (error) {
+    console.error("获取私钥失败:", error)
+    throw new Error("密码错误或数据损坏")
+  }
+}
+
 export const getBalance = async (): Promise<string> => {
   if (!currentAccount) throw new Error("Wallet locked")
   const balance = await publicClient.getBalance({ address: currentAccount.address })

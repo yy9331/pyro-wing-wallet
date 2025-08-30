@@ -8,7 +8,8 @@ import {
   getErc20Balance,
   sendTransaction,
   sendErc20Transaction,
-  setNetwork
+  setNetwork,
+  getPrivateKey
 } from "./lib/wallet"
 
 type Msg =
@@ -22,12 +23,13 @@ type Msg =
   | { type: "wallet:sendTx"; to: `0x${string}`; valueEth: string }
   | { type: "wallet:sendErc20"; token: `0x${string}`; to: `0x${string}`; amount: string; decimals: number }
   | { type: "wallet:setNetwork"; net: "sepolia" | "mainnet" }
+  | { type: "wallet:getPrivateKey"; password: string }
   | { type: "storage:saveVault"; data: unknown }
   | { type: "storage:loadVault" }
   | { type: "storage:clearVault" }
 
 chrome.runtime.onMessage.addListener((msg: Msg, _sender, sendResponse) => {
-  ;(async () => {
+  (async () => {
     try {
       switch (msg.type) {
         case "wallet:createVault": {
@@ -77,6 +79,11 @@ chrome.runtime.onMessage.addListener((msg: Msg, _sender, sendResponse) => {
         case "wallet:setNetwork": {
           setNetwork(msg.net)
           sendResponse({ ok: true })
+          break
+        }
+        case "wallet:getPrivateKey": {
+          const privateKey = await getPrivateKey(msg.password)
+          sendResponse({ ok: true, privateKey })
           break
         }
 

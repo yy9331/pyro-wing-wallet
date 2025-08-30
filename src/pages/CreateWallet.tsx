@@ -47,7 +47,7 @@ export const CreateWallet: React.FC<CreateWalletProps> = ({ onCreate, onBack, on
 
   if (step === "backup") {
     return (
-      <div className="space-y-6">
+      <div className="p-4 space-y-6">
         <div className="text-center">
           <h2 className="text-2xl font-bold text-white mb-4">备份助记词</h2>
           <p className="text-gray-400 mb-6">
@@ -94,7 +94,7 @@ export const CreateWallet: React.FC<CreateWalletProps> = ({ onCreate, onBack, on
   }
 
   return (
-    <div className="space-y-6">
+    <div className="p-4 space-y-6">
       {/* 标题 */}
       <div className="flex items-center space-x-3">
         <button
