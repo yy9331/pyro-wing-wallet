@@ -2,6 +2,142 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  /* PyroWingSwap 协调色彩方案 */
+  --primary-orange: #ff6b35;
+  --primary-red: #ff4757;
+  --primary-yellow: #ffa502;
+  --primary-blue: #3742fa;
+  --primary-green: #2ed573;
+  --primary-cyan: #17c0eb;
+  
+  --secondary-orange: #ff6348;
+  --secondary-red: #ff3838;
+  --secondary-yellow: #ffb142;
+  --secondary-blue: #5352ed;
+  --secondary-green: #26de81;
+  --secondary-cyan: #18dcff;
+  
+  /* 中性色调 - 避免强烈对比 */
+  --accent-orange: #ff8c42;
+  --accent-red: #ff6b6b;
+  --accent-blue: #4ecdc4;
+  --accent-green: #45b7d1;
+  
+  /* 背景色系 - 偏暗橙黄色主题 */
+  --dark-bg: #2d1b0e;
+  --darker-bg: #1f1409;
+  --card-bg: #3d2a1a;
+  --border-color: #5a3d2a;
+  --border-accent: #7a5a3a;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: linear-gradient(135deg, var(--dark-bg) 0%, var(--darker-bg) 50%, #1a0f06 100%);
+  color: white;
+}
+
+/* 协调的按钮样式 */
+.btn-primary {
+  @apply bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-medium py-2 px-4 rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl;
+}
+
+.btn-secondary {
+  @apply bg-gradient-to-r from-gray-600 to-gray-500 hover:from-gray-500 hover:to-gray-400 text-white font-medium py-2 px-4 rounded-lg transition-all duration-200;
+}
+
+/* 协调的卡片样式 */
+.card-fire {
+  @apply bg-gradient-to-br from-gray-800/80 via-gray-700/80 to-gray-800/80 border border-orange-500/20 rounded-lg shadow-lg backdrop-blur-sm;
+}
+
+/* 协调的输入框样式 */
+.input-fire {
+  @apply bg-gray-800/60 border border-orange-500/30 focus:border-orange-400 focus:ring-2 focus:ring-orange-500/20 text-white placeholder-gray-400 backdrop-blur-sm;
+}
+
+/* 代币圆圈颜色 - 协调方案 */
+.token-eth {
+  background: linear-gradient(135deg, #ff6b35 0%, #ff8c42 100%);
+}
+
+.token-usdt {
+  background: linear-gradient(135deg, #2ed573 0%, #26de81 100%);
+}
+
+.token-usdc {
+  background: linear-gradient(135deg, #3742fa 0%, #5352ed 100%);
+}
+
+.token-dai {
+  background: linear-gradient(135deg, #ffa502 0%, #ffb142 100%);
+}
+
+.token-wbtc {
+  background: linear-gradient(135deg, #ff6b35 0%, #ff6348 100%);
+}
+
+.token-link {
+  background: linear-gradient(135deg, #4ecdc4 0%, #45b7d1 100%);
+}
+
+.token-uni {
+  background: linear-gradient(135deg, #ff6b6b 0%, #ff8c8c 100%);
+}
+
+.token-aave {
+  background: linear-gradient(135deg, #17c0eb 0%, #18dcff 100%);
+}
+
+.token-comp {
+  background: linear-gradient(135deg, #ff4757 0%, #ff6b6b 100%);
+}
+
+.token-mkr {
+  background: linear-gradient(135deg, #2ed573 0%, #26de81 100%);
+}
+
+/* 默认代币颜色 */
+.token-default {
+  background: linear-gradient(135deg, var(--accent-orange) 0%, var(--accent-red) 100%);
+}
+
+/* 协调的加载动画 */
+@keyframes fire-pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.05);
+  }
+}
+
+.fire-pulse {
+  animation: fire-pulse 2s ease-in-out infinite;
+}
+
+/* 协调的渐变背景 */
+.fire-gradient {
+  background: linear-gradient(135deg, #ff6b35 0%, #ff8c42 25%, #ffa502 50%, #4ecdc4 75%, #3742fa 100%);
+}
+
+/* 协调的边框发光效果 */
+.fire-glow {
+  box-shadow: 0 0 20px rgba(255, 107, 53, 0.3);
+}
+
+.fire-glow:hover {
+  box-shadow: 0 0 30px rgba(255, 107, 53, 0.5);
+}
+
 /* 自定义滚动条样式 */
 ::-webkit-scrollbar {
   width: 4px;

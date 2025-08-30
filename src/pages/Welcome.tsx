@@ -16,7 +16,7 @@ export const Welcome: React.FC<WelcomeProps> = ({
   onIHaveWallet
 }) => {
   return (
-    <div className="flex flex-col items-center justify-center h-full bg-gradient-to-b from-gray-900 to-gray-800 px-6 py-8">
+    <div className="flex flex-col items-center justify-center h-full bg-gradient-to-b from-orange-800/30 via-orange-700/20 to-orange-800/30 px-6 py-8">
       {/* Logo 图片 */}
       <div className="mb-8">
         <img 
@@ -38,7 +38,7 @@ export const Welcome: React.FC<WelcomeProps> = ({
           onClick={onCreateWallet}
           variant="primary"
           size="lg"
-          className="w-full bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700"
+          className="w-full"
         >
           创建钱包
         </Button>
@@ -75,9 +75,9 @@ export const Welcome: React.FC<WelcomeProps> = ({
       <div className="absolute bottom-4 left-4 right-4 text-center">
         <p className="text-gray-500 text-xs leading-relaxed">
           继续即表示我同意
-          <a href="#" className="text-pink-400 hover:text-pink-300">服务条款</a>
+          <a href="#" className="text-orange-400 hover:text-orange-300">服务条款</a>
           和
-          <a href="#" className="text-pink-400 hover:text-pink-300">隐私政策</a>
+          <a href="#" className="text-orange-400 hover:text-orange-300">隐私政策</a>
         </p>
       </div>
     </div>

@@ -1,16 +1,17 @@
-import {
-  createVault,
-  createVaultFromPrivateKey,
+import { 
+  createVault, 
+  createVaultFromPrivateKey, 
   hasVault,
-  unlockVault,
-  getAddress,
-  getBalance,
-  getErc20Balance,
-  sendTransaction,
-  sendErc20Transaction,
+  unlockVault, 
+  getAddress, 
+  getBalance, 
+  sendTransaction, 
+  sendErc20Transaction, 
+  getErc20Balance, 
   setNetwork,
-  getPrivateKey,
-  getMnemonic
+  getPrivateKey, 
+  getMnemonic, 
+  getMnemonicPhrase 
 } from "./lib/wallet"
 
 type Msg =
@@ -26,6 +27,7 @@ type Msg =
   | { type: "wallet:setNetwork"; net: "sepolia" | "mainnet" }
   | { type: "wallet:getPrivateKey"; password: string }
   | { type: "wallet:getMnemonic"; password: string }
+  | { type: "wallet:getMnemonicPhrase"; password: string }
   | { type: "storage:saveVault"; data: unknown }
   | { type: "storage:loadVault" }
   | { type: "storage:clearVault" }
@@ -91,6 +93,11 @@ chrome.runtime.onMessage.addListener((msg: Msg, _sender, sendResponse) => {
         case "wallet:getMnemonic": {
           const mnemonic = await getMnemonic(msg.password)
           sendResponse({ ok: true, mnemonic })
+          break
+        }
+        case "wallet:getMnemonicPhrase": {
+          const mnemonicPhrase = await getMnemonicPhrase(msg.password)
+          sendResponse({ ok: true, mnemonicPhrase })
           break
         }
 

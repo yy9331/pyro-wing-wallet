@@ -94,7 +94,7 @@ export const ImportWallet: React.FC<ImportWalletProps> = ({ onImport, onBack }) 
                     focusNext(i)
                   }
                 }}
-                className="w-full p-2 rounded-lg bg-gray-700 border border-gray-600 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full p-2 rounded-lg bg-gray-800/60 border border-orange-500/30 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent backdrop-blur-sm"
                 placeholder={`${i + 1}`}
               />
             ))}
@@ -118,10 +118,10 @@ export const ImportWallet: React.FC<ImportWalletProps> = ({ onImport, onBack }) 
       </Button>
 
       {/* 提示 */}
-      <div className="bg-blue-900 border border-blue-600 rounded-lg p-4">
+      <div className="bg-gray-800/80 border border-orange-500/20 rounded-lg p-4 backdrop-blur-sm">
         <div className="flex items-start space-x-3">
-          <span className="text-blue-400 text-xl">💡</span>
-          <div className="text-blue-200 text-sm">
+          <span className="text-orange-400 text-xl">💡</span>
+          <div className="text-gray-200 text-sm">
             <p className="font-semibold mb-2">导入说明：</p>
             <ul className="space-y-1">
               <li>• 输入你的12个助记词</li>

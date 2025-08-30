@@ -7,7 +7,7 @@ interface LayoutProps {
 
 export const Layout: React.FC<LayoutProps> = ({ children, className = "" }) => {
   return (
-    <div className={`w-[380px] h-[600px] bg-gray-900 text-white flex flex-col ${className}`}>
+    <div className={`w-[380px] h-[600px] text-white flex flex-col ${className}`}>
       {children}
     </div>
   )
@@ -15,7 +15,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, className = "" }) => {
 
 export const Header: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return (
-    <div className="bg-gray-800 border-b border-gray-700 p-4">
+    <div className="bg-gray-800/80 border-b border-orange-500/20 p-4 backdrop-blur-sm">
       {children}
     </div>
   )
@@ -23,7 +23,7 @@ export const Header: React.FC<{ children: React.ReactNode }> = ({ children }) =>
 
 export const Content: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className = "" }) => {
   return (
-    <div className={`flex-1 overflow-y-auto p-4 scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-transparent ${className}`}>
+    <div className={`flex-1 overflow-y-auto p-4 scrollbar-thin scrollbar-thumb-orange-500/50 scrollbar-track-transparent ${className}`}>
       {children}
     </div>
   )
@@ -31,7 +31,7 @@ export const Content: React.FC<{ children: React.ReactNode; className?: string }
 
 export const Footer: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return (
-    <div className="bg-gray-800 border-t border-gray-700 p-3">
+    <div className="bg-gray-800/80 border-t border-orange-500/20 p-3 backdrop-blur-sm">
       {children}
     </div>
   )

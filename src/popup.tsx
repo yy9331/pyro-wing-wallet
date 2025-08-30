@@ -11,6 +11,8 @@ import { Unlock } from "./pages/Unlock"
 import { Assets } from "./pages/Assets"
 import { Send } from "./pages/Send"
 import { Settings } from "./pages/Settings"
+import { toastService, ToastManager } from "./components/Toast"
+import { ConfirmDialog } from "./components/ConfirmDialog"
 
 // 消息通信函数
 const call = async<T = any>(msg: any): Promise<T> => {
@@ -36,10 +38,18 @@ const IndexPopup = () => {
   const [tokenBalances, setTokenBalances] = useState<Record<string, string>>({})
   const [isLoadingBalance, setIsLoadingBalance] = useState(false)
   const [isTokensLoading, setIsTokensLoading] = useState(false)
+  const [toasts, setToasts] = useState<Array<{id: string, message: string, type: "success" | "error" | "info" | "warning"}>>([])
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
 
   // 检查钱包状态
   useEffect(() => {
     checkWalletStatus()
+  }, [])
+
+  // Toast订阅
+  useEffect(() => {
+    const unsubscribe = toastService.subscribe(setToasts)
+    return unsubscribe
   }, [])
 
   // 加载自定义代币列表
@@ -52,10 +62,15 @@ const IndexPopup = () => {
 
   // 智能加载代币余额
   const loadTokenBalances = async (tokenList: CustomToken[], isInitialLoad = false) => {
-    if (tokenList.length === 0) return
+    console.log(`开始加载代币余额，代币数量: ${tokenList.length}，是否初始加载: ${isInitialLoad}`)
+    if (tokenList.length === 0) {
+      console.log("没有代币需要加载")
+      return
+    }
 
     // 设置loading状态
     if (isInitialLoad) {
+      console.log("设置代币加载状态为true")
       setIsTokensLoading(true)
     }
 
@@ -82,6 +97,7 @@ const IndexPopup = () => {
 
     // 标记初始加载完成
     if (isInitialLoad) {
+      console.log("初始加载完成，设置代币加载状态为false")
       setIsTokensLoading(false)
     }
 
@@ -181,6 +197,11 @@ const IndexPopup = () => {
       if (balRes.ok && balRes.balance) {
         setBalance(balRes.balance)
       }
+      
+      // 重新加载代币余额
+      if (tokens.length > 0) {
+        await loadTokenBalances(tokens, true)
+      }
     }
     setIsLoadingBalance(false)
   }
@@ -268,6 +289,17 @@ const IndexPopup = () => {
         if (balRes.ok && balRes.balance) {
           setBalance(balRes.balance)
         }
+        
+        // 自动加载自定义代币余额
+        const customTokens = JSON.parse(localStorage.getItem("pyro-custom-tokens") || "[]")
+        console.log(`解锁后检查自定义代币，数量: ${customTokens.length}`)
+        if (customTokens.length > 0) {
+          console.log("开始加载自定义代币余额")
+          setTokens(customTokens)
+          await loadTokenBalances(customTokens, true)
+        } else {
+          console.log("没有自定义代币需要加载")
+        }
       } else {
         throw new Error(res.error || "密码错误")
       }
@@ -299,9 +331,9 @@ const IndexPopup = () => {
         })
       }
       
-      if (res.ok && res.hash) {
-        alert(`交易已发送！\n交易哈希: ${res.hash}`)
-        setCurrentPage("assets")
+             if (res.ok && res.hash) {
+         toastService.success(`交易已发送！\n交易哈希: ${res.hash}`)
+         setCurrentPage("assets")
         // 更新余额
         const balRes = await call<{ ok: boolean; balance?: string; error?: string }>({ type: "wallet:getBalance" })
         if (balRes.ok && balRes.balance) {
@@ -314,11 +346,11 @@ const IndexPopup = () => {
             setTokenBalances((s) => ({ ...s, [tokenAddress]: tokenRes.balance! }))
           }
         }
-      } else {
-        alert(`发送失败: ${res.error}`)
-      }
-    } catch (error) {
-      alert(`发送失败: ${error}`)
+             } else {
+         toastService.error(`发送失败: ${res.error}`)
+       }
+     } catch (error) {
+       toastService.error(`发送失败: ${error}`)
     }
   }
 
@@ -326,30 +358,33 @@ const IndexPopup = () => {
   const handleCopyAddress = async () => {
     if (!address) return
     
-    try {
-      await navigator.clipboard.writeText(address)
-      alert("地址已复制到剪贴板")
-    } catch (error) {
-      console.error("复制失败:", error)
-      // 降级方案：使用传统的复制方法
-      const textArea = document.createElement("textarea")
-      textArea.value = address
-      document.body.appendChild(textArea)
-      textArea.select()
-      document.execCommand("copy")
-      document.body.removeChild(textArea)
-      alert("地址已复制到剪贴板")
-    }
+         try {
+       await navigator.clipboard.writeText(address)
+       toastService.success("地址已复制到剪贴板")
+     } catch (error) {
+       console.error("复制失败:", error)
+       // 降级方案：使用传统的复制方法
+       const textArea = document.createElement("textarea")
+       textArea.value = address
+       document.body.appendChild(textArea)
+       textArea.select()
+       document.execCommand("copy")
+       document.body.removeChild(textArea)
+       toastService.success("地址已复制到剪贴板")
+     }
   }
 
   // 退出钱包
   const handleLogout = () => {
-    if (confirm("确定要退出钱包吗？")) {
-      setIsUnlocked(false)
-      setAddress("")
-      setBalance("0")
-      setCurrentPage("unlock")
-    }
+    setShowLogoutConfirm(true)
+  }
+
+  const confirmLogout = () => {
+    setIsUnlocked(false)
+    setAddress("")
+    setBalance("0")
+    setCurrentPage("unlock")
+    setShowLogoutConfirm(false)
   }
 
   // 渲染页面内容
@@ -400,16 +435,16 @@ const IndexPopup = () => {
             address={address}
             onSend={() => setCurrentPage("send")}
             onReceive={() => setCurrentPage("receive")}
-            onSwap={() => alert("兑换功能开发中...")}
+                         onSwap={() => toastService.info("兑换功能开发中...")}
             onAddToken={async () => {
               let input = prompt("输入 ERC20 合约地址 (0x...)") || ""
               input = input.trim()
               if (!input) return
               if (!input.startsWith("0x")) input = `0x${input}`
-              if (!/^0x[0-9a-fA-F]{40}$/.test(input)) {
-                alert("合约地址格式不正确")
-                return
-              }
+                             if (!/^0x[0-9a-fA-F]{40}$/.test(input)) {
+                 toastService.error("合约地址格式不正确")
+                 return
+               }
               const tokenAddr = input.toLowerCase() as `0x${string}`
               const res = await call<{ ok: boolean; symbol?: string; balance?: string; decimals?: number; error?: string }>({ type: "wallet:getErc20", token: tokenAddr })
               if (res.ok && res.symbol && typeof res.decimals === "number") {
@@ -417,9 +452,9 @@ const IndexPopup = () => {
                 setTokens(next)
                 localStorage.setItem("pyro-custom-tokens", JSON.stringify(next))
                 if (res.balance) setTokenBalances((s) => ({ ...s, [tokenAddr]: res.balance! }))
-              } else {
-                alert(res.error || "查询失败")
-              }
+                             } else {
+                 toastService.error(res.error || "查询失败")
+               }
             }}
             isLoading={isLoadingBalance}
             tokens={tokens}
@@ -533,37 +568,53 @@ const IndexPopup = () => {
 
   // 主钱包界面
   return (
-    <Layout>
-      <Header>
-        <WalletHeader
-          network={network}
-          address={address}
-          onNetworkChange={handleNetworkChange}
-          onSettingsClick={() => setCurrentPage("settings")}
-          onCopyAddress={handleCopyAddress}
-          onLogout={handleLogout}
-        />
-      </Header>
-
-      <Content>
-        {currentPage === "assets" && (
-          <Tabs
-            tabs={[
-              { id: "assets", label: "资产" },
-              { id: "defi", label: "DeFi" },
-              { id: "nft", label: "NFT" },
-              { id: "history", label: "历史" }
-            ]}
-            activeTab="assets"
-            onTabChange={() => {}}
+    <>
+      <ToastManager 
+        toasts={toasts} 
+        onRemove={(id) => toastService.remove(id)} 
+      />
+      <ConfirmDialog
+        isOpen={showLogoutConfirm}
+        title="退出钱包"
+        message="确定要退出钱包吗？"
+        onConfirm={confirmLogout}
+        onCancel={() => setShowLogoutConfirm(false)}
+        type="warning"
+        confirmText="确定"
+        cancelText="取消"
+      />
+      <Layout>
+        <Header>
+          <WalletHeader
+            network={network}
+            address={address}
+            onNetworkChange={handleNetworkChange}
+            onSettingsClick={() => setCurrentPage("settings")}
+            onCopyAddress={handleCopyAddress}
+            onLogout={handleLogout}
           />
-        )}
-        
-        <div className="mt-4">
-          {renderContent()}
-        </div>
-      </Content>
-    </Layout>
+        </Header>
+
+        <Content>
+          {currentPage === "assets" && (
+            <Tabs
+              tabs={[
+                { id: "assets", label: "资产" },
+                { id: "defi", label: "DeFi" },
+                { id: "nft", label: "NFT" },
+                { id: "history", label: "历史" }
+              ]}
+              activeTab="assets"
+              onTabChange={() => {}}
+            />
+          )}
+          
+          <div className="mt-4">
+            {renderContent()}
+          </div>
+        </Content>
+      </Layout>
+    </>
   )
 }
 

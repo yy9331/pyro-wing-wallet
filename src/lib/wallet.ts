@@ -234,6 +234,26 @@ export const getMnemonic = async (password: string): Promise<string> => {
   }
 }
 
+export const getMnemonicPhrase = async (password: string): Promise<string> => {
+  const encrypted = await loadVaultFromStorage<EncryptedPayload>()
+  if (!encrypted) {
+    throw new Error("Vault not found")
+  }
+
+  try {
+    const vaultData = await decryptJson<VaultData>(encrypted, password)
+
+    if (vaultData.mnemonic) {
+      return vaultData.mnemonic
+    } else {
+      throw new Error("No mnemonic found")
+    }
+  } catch (error) {
+    console.error("获取助记词失败:", error)
+    throw new Error("密码错误或数据损坏")
+  }
+}
+
 export const getPrivateKey = async (password: string): Promise<string> => {
   // 重新验证密码并获取私钥
   const encrypted = await loadVaultFromStorage<EncryptedPayload>()

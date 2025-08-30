@@ -16,6 +16,27 @@ interface AssetsProps {
   isTokensLoading?: boolean
 }
 
+// 获取代币颜色类名的函数
+const getTokenColorClass = (symbol: string): string => {
+  const symbolLower = symbol.toLowerCase()
+  
+  if (symbolLower === 'eth' || symbolLower === 'ethereum') return 'token-eth'
+  if (symbolLower === 'usdt') return 'token-usdt'
+  if (symbolLower === 'usdc') return 'token-usdc'
+  if (symbolLower === 'dai') return 'token-dai'
+  if (symbolLower === 'wbtc') return 'token-wbtc'
+  if (symbolLower === 'link') return 'token-link'
+  if (symbolLower === 'uni') return 'token-uni'
+  if (symbolLower === 'aave') return 'token-aave'
+  if (symbolLower === 'comp') return 'token-comp'
+  if (symbolLower === 'mkr') return 'token-mkr'
+  
+  // 为其他代币生成基于符号的随机颜色
+  const colors = ['token-eth', 'token-usdt', 'token-usdc', 'token-dai', 'token-wbtc', 'token-link', 'token-uni', 'token-aave', 'token-comp', 'token-mkr']
+  const index = (symbolLower.charCodeAt(0) || 0) % colors.length
+  return colors[index] || 'token-default'
+}
+
 // 余额显示组件
 const BalanceDisplay: React.FC<{ balance: string }> = ({ balance }) => {
   return (
@@ -33,14 +54,14 @@ const BalanceDisplay: React.FC<{ balance: string }> = ({ balance }) => {
 // 代币列表组件
 const TokenList: React.FC<{ balance: string }> = ({ balance }) => {
   return (
-    <div className="space-y-3">
-      <h3 className="text-lg font-semibold text-white">代币</h3>
-      <div className="bg-gray-800 rounded-lg p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
-              <span className="text-xs font-bold">ETH</span>
-            </div>
+          <div className="space-y-3">
+        <h3 className="text-lg font-semibold text-white">代币</h3>
+        <div className="bg-gradient-to-br from-gray-800/80 via-gray-700/80 to-gray-800/80 border border-orange-500/20 rounded-lg p-4 shadow-lg backdrop-blur-sm">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className={`w-8 h-8 ${getTokenColorClass('ETH')} rounded-full flex items-center justify-center shadow-lg`}>
+                <span className="text-xs font-bold text-white">ETH</span>
+              </div>
             <div>
               <div className="text-white font-medium">Ethereum</div>
               <div className="text-sm text-gray-400">{balance} ETH</div>
@@ -151,10 +172,10 @@ export const Assets: React.FC<AssetsProps> = ({
           ) : (
             // 显示实际代币
             tokens.map((token) => (
-              <div key={token.address} className="bg-gray-800 rounded-lg p-3 flex items-center justify-between">
+              <div key={token.address} className="bg-gradient-to-br from-gray-800/80 via-gray-700/80 to-gray-800/80 border border-orange-500/20 rounded-lg p-3 flex items-center justify-between shadow-lg backdrop-blur-sm">
                 <div className="flex items-center space-x-3">
-                  <div className="w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center">
-                    <span className="text-xs font-bold">{token.symbol}</span>
+                  <div className={`w-8 h-8 ${getTokenColorClass(token.symbol)} rounded-full flex items-center justify-center shadow-lg`}>
+                    <span className="text-xs font-bold text-white">{token.symbol}</span>
                   </div>
                   <div>
                     <div className="text-white font-medium">{token.symbol}</div>
@@ -166,7 +187,7 @@ export const Assets: React.FC<AssetsProps> = ({
                 {onRefreshToken && (
                   <button
                     onClick={() => onRefreshToken(token.address)}
-                    className="text-xs text-blue-400 hover:text-blue-300"
+                    className="text-xs text-orange-400 hover:text-orange-300 transition-colors"
                   >
                     刷新
                   </button>

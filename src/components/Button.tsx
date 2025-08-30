@@ -3,7 +3,7 @@ import React from "react"
 interface ButtonProps {
   children: React.ReactNode
   onClick?: () => void
-  variant?: "primary" | "secondary" | "danger" | "ghost"
+  variant?: "primary" | "secondary" | "ghost"
   size?: "sm" | "md" | "lg"
   disabled?: boolean
   className?: string
@@ -17,13 +17,12 @@ export const Button: React.FC<ButtonProps> = ({
   disabled = false,
   className = ""
 }) => {
-  const baseClasses = "font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900"
+  const baseClasses = "font-medium rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
   
   const variantClasses = {
-    primary: "bg-blue-600 hover:bg-blue-700 focus:ring-blue-500 text-white",
-    secondary: "bg-gray-600 hover:bg-gray-700 focus:ring-gray-500 text-white",
-    danger: "bg-red-600 hover:bg-red-700 focus:ring-red-500 text-white",
-    ghost: "bg-transparent hover:bg-gray-700 focus:ring-gray-500 text-gray-400 hover:text-white"
+    primary: "bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white shadow-lg hover:shadow-xl focus:ring-orange-500",
+    secondary: "bg-gradient-to-r from-gray-600 to-gray-500 hover:from-gray-500 hover:to-gray-400 text-white focus:ring-gray-500",
+    ghost: "bg-transparent hover:bg-gray-700 text-gray-300 hover:text-white focus:ring-gray-500"
   }
   
   const sizeClasses = {
@@ -32,13 +31,13 @@ export const Button: React.FC<ButtonProps> = ({
     lg: "px-6 py-3 text-base"
   }
   
-  const disabledClasses = disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
+  const classes = `${baseClasses} ${variantClasses[variant]} ${sizeClasses[size]} ${className}`
   
   return (
     <button
       onClick={onClick}
       disabled={disabled}
-      className={`${baseClasses} ${variantClasses[variant]} ${sizeClasses[size]} ${disabledClasses} ${className}`}
+      className={classes}
     >
       {children}
     </button>
